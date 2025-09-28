@@ -25,6 +25,7 @@ foreach(Test ${TestSources})
     add_executable(${Stem} ${Test})
     set_target_properties(${Stem} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Testing)
+    add_compile_options(-pthread)
 
     add_test(
         NAME ${Stem}
