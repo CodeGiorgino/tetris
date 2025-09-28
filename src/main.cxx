@@ -6,48 +6,119 @@
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
+#include <utility>
 
 using namespace std::chrono_literals;
+
+// ----------------------------------------------------------------------------- 
+// Constants Definitions
+// ----------------------------------------------------------------------------- 
 
 constexpr auto width  = 10;
 constexpr auto height = 20;
 
-enum class tiles {
+// ----------------------------------------------------------------------------- 
+// Enumerators Definitions
+// ----------------------------------------------------------------------------- 
+
+// Tile, the states of a cell
+enum class Tile {
     EMPTY, PIVOT, FULL
 };
 
-enum class shapes {
-    STRAIGHT, SQUARE, T, L, SKEW    
+// Shape, the shapes of a tetromino
+enum class Shape {
+    STRAIGHT, SQUARE, T, L, SKEW, __last
 };
 
-typedef std::array<std::array<tiles, 4>, 3> Tetromino;
-typedef std::array<std::array<tiles, width>, height> Board;
+// ----------------------------------------------------------------------------- 
+// Types Definitions
+// ----------------------------------------------------------------------------- 
 
-Tetromino get_tetromino(shapes shape) {
+// Board, stores the board data
+typedef std::array<std::array<Tile, width>, height> Board;
+
+// Tetromino, stores the tetromino data
+typedef std::array<std::array<Tile, 4>, 3> Tetromino;
+
+// ivec2, stores 2 int components
+typedef std::pair<int, int> ivec2;
+
+// ----------------------------------------------------------------------------- 
+// Global Variables
+// ----------------------------------------------------------------------------- 
+
+Board board {};
+ivec2 currentPosition {};
+Shape currentShape {};
+
+std::atomic_bool running = true;
+
+// ----------------------------------------------------------------------------- 
+// Functions Definitions
+// ----------------------------------------------------------------------------- 
+
+// Get the Tetromino from the Shape
+Tetromino get_tetromino(Shape shape) {
     switch (shape) {
-        case shapes::STRAIGHT: return { {{tiles::FULL, tiles::PIVOT, tiles::FULL, tiles::FULL}} };
-        case shapes::SQUARE:   return { {{tiles::PIVOT, tiles::FULL}, {tiles::FULL, tiles::FULL}} };
-        case shapes::T:        return { {{tiles::FULL, tiles::PIVOT, tiles::FULL}, {tiles::EMPTY, tiles::FULL}} };
-        case shapes::L:        return { {{tiles::FULL}, {tiles::FULL}, {tiles::PIVOT, tiles::FULL}} };
-        case shapes::SKEW:     return { {{tiles::FULL}, {tiles::PIVOT, tiles::FULL}, {tiles::EMPTY, tiles::FULL}} };
+        case Shape::STRAIGHT: return { {{Tile::FULL, Tile::PIVOT, Tile::FULL, Tile::FULL}} };
+        case Shape::SQUARE:   return { {{Tile::PIVOT, Tile::FULL}, {Tile::FULL, Tile::FULL}} };
+        case Shape::T:        return { {{Tile::FULL, Tile::PIVOT, Tile::FULL}, {Tile::EMPTY, Tile::FULL}} };
+        case Shape::L:        return { {{Tile::FULL}, {Tile::FULL}, {Tile::PIVOT, Tile::FULL}} };
+        case Shape::SKEW:     return { {{Tile::FULL}, {Tile::PIVOT, Tile::FULL}, {Tile::EMPTY, Tile::FULL}} };
         default: throw std::exception(); // Unreachable
     };
 }
 
-void __print_tetromino(Tetromino t) {
-    for (const auto& row : t) {
-        for (const auto& cell : row)
+// Draw the UI
+void draw() {
+    // clear the screen
+    std::print("\033[2J\033[1;1H");
+
+    // box boundaries
+    std::cout << "┌";
+    std::print(std::cout, "{:─>{}}", "", width * 2);
+    std::cout << "┐" << std::endl;
+
+    for (auto i = 0; i < board.size(); i++) {
+        const auto& row = board[i];
+        std::cout << "│";
+        for (auto j = 0; j < row.size(); j++) {
+            const auto& cell = row[j];
+            // TODO: check for current tetromino
             switch (cell) {
-                case tiles::EMPTY: std::print(std::cerr, " ");
-                case tiles::PIVOT: std::print(std::cerr, "@");
-                case tiles::FULL:  std::print(std::cerr, "#");
+                case Tile::EMPTY:
+                    {
+                        std::cout << "  ";
+                        break;
+                    }
+                case Tile::PIVOT:
+                case Tile::FULL:
+                    {
+                        std::cout << "■■";
+                        break;
+                    }
                 default: throw std::exception(); // Unreachable
             };
-        std::println(std::cerr, "");
+        }
+        std::cout << "│" << std::endl;
     }
+
+    // box boundaries
+    std::cout << "└";
+    std::print(std::cout, "{:─>{}}", "", width * 2);
+    std::cout << "┘" << std::endl;
 }
 
+// Spawn a new tetromino
+void spawn() {
+    const auto shape = static_cast<Shape>(
+            rand() % std::to_underlying(Shape::__last));
+}
+
+// Get the key pressed
 char get_key_pressed() {
+    // set terminal to be non-blocking
     char buf;
     struct termios term;
     if (tcgetattr(0, &term) < 0) {
@@ -75,12 +146,30 @@ char get_key_pressed() {
     return buf;
 }
 
-Board board;
-std::atomic_bool running = true;
-
+// Handle the key pressed
 void handle_key_press() {
     while (running) {
         switch (get_key_pressed()) {
+            case 'h':
+                {
+                    // TODO: move left
+                    break;
+                }
+            case 'l':
+                {
+                    // TODO: move right
+                    break;
+                }
+            case 'j':
+                {
+                    // TODO: move down
+                    break;
+                }
+            case 'r':
+                {
+                    // TODO: rotate
+                    break;
+                }
             case 'q':
                 {
                     running = false;
@@ -88,6 +177,7 @@ void handle_key_press() {
                 }
             default: break;
         };
+        std::this_thread::sleep_for(100ms);
     };
 }
 
@@ -96,7 +186,7 @@ int main(void) {
     std::thread inputThread(handle_key_press);
 
     while (running) {
-        std::println(std::cerr, "[d] Drawing");
+        draw();
         std::this_thread::sleep_for(1s);
     };
 
