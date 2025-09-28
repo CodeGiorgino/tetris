@@ -1,8 +1,8 @@
-- (Tetromino)[https://en.wikipedia.org/wiki/Tetromino]
-- (std::mutex)[https://en.cppreference.com/w/cpp/thread/mutex.html]
-- (std::future)[https://en.cppreference.com/w/cpp/thread/future.html]
-- (Non blocking terminal input)[https://stackoverflow.com/questions/421860/capture-characters-from-standard-input-without-waiting-for-enter-to-be-pressed]
-- (std::string format specs)[https://en.cppreference.com/w/cpp/utility/format/spec.html]
+- [Tetromino](https://en.wikipedia.org/wiki/Tetromino)
+- [std::mutex](https://en.cppreference.com/w/cpp/thread/mutex.html)
+- [std::future](https://en.cppreference.com/w/cpp/thread/future.html)
+- [Non blocking terminal input](https://stackoverflow.com/questions/421860/capture-characters-from-standard-input-without-waiting-for-enter-to-be-pressed)
+- [std::string format specs](https://en.cppreference.com/w/cpp/utility/format/spec.html)
 
 ## Rotation
 ### Examples

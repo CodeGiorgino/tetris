@@ -12,4 +12,4 @@ cmake --build .
 ```
 
 ## References
-Have a look at the (references)[references.md] used for this project
+Have a look at the [references](references.md) used for this project
