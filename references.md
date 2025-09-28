@@ -1,11 +1,14 @@
-- [Tetromino](https://en.wikipedia.org/wiki/Tetromino)
-- [std::mutex](https://en.cppreference.com/w/cpp/thread/mutex.html)
-- [std::future](https://en.cppreference.com/w/cpp/thread/future.html)
-- [Non blocking terminal input](https://stackoverflow.com/questions/421860/capture-characters-from-standard-input-without-waiting-for-enter-to-be-pressed)
-- [std::string format specs](https://en.cppreference.com/w/cpp/utility/format/spec.html)
+# References
+List of references used for this project:
+- [](https://en.wikipedia.org/wiki/Tetromino)
+- [](https://en.cppreference.com/w/cpp/thread/mutex.html)
+- [](https://en.cppreference.com/w/cpp/thread/future.html)
+- [](https://stackoverflow.com/questions/421860/capture-characters-from-standard-input-without-waiting-for-enter-to-be-pressed)
+- [](https://en.cppreference.com/w/cpp/utility/format/spec.html)
 
 ## Rotation
 ### Examples
+```text
 0deg:
 ■
 ■
@@ -30,6 +33,7 @@
 (0, -1) (0, 0)
         (1, 0)
         (2, 0)
+```
 
 ### Trasformation function
 ```cxx
