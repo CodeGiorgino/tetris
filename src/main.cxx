@@ -17,6 +17,10 @@ using namespace std::chrono_literals;
 constexpr auto width  = 10;
 constexpr auto height = 20;
 
+#define ANSI_CLEAR            "\033[2J\033[0;0f"
+#define ANSI_SAVE_POSITION    "\033[s"
+#define ANSI_RESTORE_POSITION "\033[u"
+
 // ----------------------------------------------------------------------------- 
 // Enumerators Definitions
 // ----------------------------------------------------------------------------- 
@@ -32,6 +36,15 @@ enum class Shape {
 };
 
 // ----------------------------------------------------------------------------- 
+// Structures Definitions
+// ----------------------------------------------------------------------------- 
+
+// Point, stores 2 int components
+typedef struct {
+    int y, x;
+} Point;
+
+// ----------------------------------------------------------------------------- 
 // Types Definitions
 // ----------------------------------------------------------------------------- 
 
@@ -39,18 +52,16 @@ enum class Shape {
 typedef std::array<std::array<Tile, width>, height> Board;
 
 // Tetromino, stores the tetromino data
-typedef std::array<std::array<Tile, 4>, 3> Tetromino;
-
-// ivec2, stores 2 int components
-typedef std::pair<int, int> ivec2;
+// NOTE: the tiles positions are stored as offsets from the pivot
+typedef std::array<std::pair<Tile, Point>, 4> Tetromino;
 
 // ----------------------------------------------------------------------------- 
 // Global Variables
 // ----------------------------------------------------------------------------- 
 
 Board board {};
-ivec2 currentPosition {};
-Shape currentShape {};
+Point currentPosition {};
+Tetromino currentTetromino {};
 
 std::atomic_bool running = true;
 
@@ -61,59 +72,51 @@ std::atomic_bool running = true;
 // Get the Tetromino from the Shape
 Tetromino get_tetromino(Shape shape) {
     switch (shape) {
-        case Shape::STRAIGHT: return { {{Tile::FULL, Tile::PIVOT, Tile::FULL, Tile::FULL}} };
-        case Shape::SQUARE:   return { {{Tile::PIVOT, Tile::FULL}, {Tile::FULL, Tile::FULL}} };
-        case Shape::T:        return { {{Tile::FULL, Tile::PIVOT, Tile::FULL}, {Tile::EMPTY, Tile::FULL}} };
-        case Shape::L:        return { {{Tile::FULL}, {Tile::FULL}, {Tile::PIVOT, Tile::FULL}} };
-        case Shape::SKEW:     return { {{Tile::FULL}, {Tile::PIVOT, Tile::FULL}, {Tile::EMPTY, Tile::FULL}} };
+        case Shape::STRAIGHT:
+            return {{
+                { Tile::PIVOT, { 0,  0 } },
+                { Tile::FULL,  { 1, -1 } },
+                { Tile::FULL,  { 0,  1 } },
+                { Tile::FULL,  { 0,  2 } }
+            }};
+        case Shape::SQUARE:  
+            return {{
+                { Tile::PIVOT, { 0, 0 } },
+                { Tile::FULL,  { 0, 1 } },
+                { Tile::FULL,  { 1, 0 } },
+                { Tile::FULL,  { 1, 1 } }
+            }};
+        case Shape::T:       
+            return {{
+                { Tile::PIVOT, { 0,  0 } },
+                { Tile::FULL,  { 0, -1 } },
+                { Tile::FULL,  { 0,  1 } },
+                { Tile::FULL,  { 1,  1 } }
+            }};
+        case Shape::L:       
+            return {{
+                { Tile::PIVOT, {  0, 0 } },
+                { Tile::FULL,  { -1, 0 } },
+                { Tile::FULL,  { -2, 0 } },
+                { Tile::FULL,  {  0, 1 } }
+            }};
+        case Shape::SKEW:    
+            return {{
+                { Tile::PIVOT, {  0, 0 } },
+                { Tile::FULL,  {  1, 0 } },
+                { Tile::FULL,  {  0, 1 } },
+                { Tile::FULL,  { -1, 0 } }
+            }};
         default: throw std::exception(); // Unreachable
     };
 }
 
-// Draw the UI
-void draw() {
-    // clear the screen
-    std::print("\033[2J\033[1;1H");
-
-    // box boundaries
-    std::cout << "┌";
-    std::print(std::cout, "{:─>{}}", "", width * 2);
-    std::cout << "┐" << std::endl;
-
-    for (auto i = 0; i < board.size(); i++) {
-        const auto& row = board[i];
-        std::cout << "│";
-        for (auto j = 0; j < row.size(); j++) {
-            const auto& cell = row[j];
-            // TODO: check for current tetromino
-            switch (cell) {
-                case Tile::EMPTY:
-                    {
-                        std::cout << "  ";
-                        break;
-                    }
-                case Tile::PIVOT:
-                case Tile::FULL:
-                    {
-                        std::cout << "■■";
-                        break;
-                    }
-                default: throw std::exception(); // Unreachable
-            };
-        }
-        std::cout << "│" << std::endl;
-    }
-
-    // box boundaries
-    std::cout << "└";
-    std::print(std::cout, "{:─>{}}", "", width * 2);
-    std::cout << "┘" << std::endl;
-}
-
 // Spawn a new tetromino
-void spawn() {
-    const auto shape = static_cast<Shape>(
-            rand() % std::to_underlying(Shape::__last));
+void spawn_tetromino() {
+    currentPosition = { 0, static_cast<int>(width * 0.5) };
+    currentTetromino = get_tetromino(
+            static_cast<Shape>(
+                rand() % std::to_underlying(Shape::__last)));
 }
 
 // Get the key pressed
@@ -149,6 +152,8 @@ char get_key_pressed() {
 // Handle the key pressed
 void handle_key_press() {
     while (running) {
+        // TODO: maybe move the logic in the update function
+        // to prevent multiplle input between redraws
         switch (get_key_pressed()) {
             case 'h':
                 {
@@ -177,16 +182,110 @@ void handle_key_press() {
                 }
             default: break;
         };
+
         std::this_thread::sleep_for(100ms);
     };
+}
+
+// Update the board
+void update() {
+    auto newBoard = board;
+    bool isColliding = false;
+    for (const auto& p : currentTetromino) {
+        const auto& [tile, offset] = p;
+        const Point position = {
+            currentPosition.y + offset.y + 1,
+            currentPosition.x + offset.x
+        };
+
+        // check for bottom collision
+        if (board[position.y][position.x] == Tile::FULL
+                || position.y >= height) {
+            isColliding = true;
+        }
+
+        newBoard
+            [currentPosition.y + offset.y]
+            [currentPosition.x + offset.x]
+                = Tile::FULL;
+    }
+
+    if (isColliding) {
+        std::swap(board, newBoard);
+        spawn_tetromino();
+        return;
+    }
+
+    currentPosition.y++;
+}
+
+// Draw the UI
+void draw() {
+    std::cout << ANSI_CLEAR;
+
+    // draw the box boundaries
+    std::println(std::cout,
+            "┌{:─>{}}┐", 
+            "", width);
+
+    // draw the board
+    for (auto i = 0; i < board.size(); i++) {
+        const auto& row = board[i];
+        std::print("│");
+        for (auto j = 0; j < row.size(); j++) {
+            const auto& cell = row[j];
+            switch (cell) {
+                case Tile::EMPTY:
+                    {
+                        std::print(" ");
+                        break;
+                    }
+                case Tile::PIVOT:
+                case Tile::FULL:
+                    {
+                        std::print("■");
+                        break;
+                    }
+                default: throw std::exception(); // Unreachable
+            };
+        }
+        std::println("│");
+    }
+
+    // draw the box boundaries
+    std::println(std::cout,
+            "└{:─>{}}┘",
+            "", width);
+
+    // draw the current Tetromino
+    for (const auto& p : currentTetromino) {
+        const auto& [tile, offset] = p;
+        const Point  position = {
+            currentPosition.y + offset.y,
+            currentPosition.x + offset.x
+        };
+
+        std::print(std::cout,
+                "\033[{};{}f""■",
+                position.y + 2,
+                position.x + 2);
+    }
+
+    std::println(std::cout,
+            "\033[{};0f",
+            height + 2);
+    std::cout << std::flush;
 }
 
 int main(void) {
     // handle key press in separate thread
     std::thread inputThread(handle_key_press);
 
+    spawn_tetromino();
+
     while (running) {
         draw();
+        update();
         std::this_thread::sleep_for(1s);
     };
 
