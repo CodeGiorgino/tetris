@@ -157,12 +157,16 @@ void handle_key_press() {
         switch (get_key_pressed()) {
             case 'h':
                 {
-                    // TODO: move left
+                    if (currentPosition.x > 0) {
+                        currentPosition.x--;
+                    }
                     break;
                 }
             case 'l':
                 {
-                    // TODO: move right
+                    if (currentPosition.x < width - 1) {
+                        currentPosition.x++;
+                    }
                     break;
                 }
             case 'j':
@@ -172,7 +176,11 @@ void handle_key_press() {
                 }
             case 'r':
                 {
-                    // TODO: rotate
+                    for (auto& [tile, point] : currentTetromino) {
+                        const auto temp = point.x;
+                        point.x = point.y;
+                        point.y = -temp;
+                    }
                     break;
                 }
             case 'q':
