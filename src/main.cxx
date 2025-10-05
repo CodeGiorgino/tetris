@@ -10,10 +10,8 @@
 
 using namespace std::chrono_literals;
 
-// ----------------------------------------------------------------------------- 
-// Constants Definitions
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Constants Definitions
+// -----------------------------------------------------------------------------
 constexpr auto width  = 10;
 constexpr auto height = 20;
 
@@ -21,10 +19,8 @@ constexpr auto height = 20;
 #define ANSI_SAVE_POSITION    "\033[s"
 #define ANSI_RESTORE_POSITION "\033[u"
 
-// ----------------------------------------------------------------------------- 
-// Enumerators Definitions
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Enumerators Definitions
+// -----------------------------------------------------------------------------
 // Tile, the states of a cell
 enum class Tile {
     EMPTY, PIVOT, FULL
@@ -35,19 +31,15 @@ enum class Shape {
     STRAIGHT, SQUARE, T, L, SKEW, __last
 };
 
-// ----------------------------------------------------------------------------- 
-// Structures Definitions
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Structures Definitions
+// -----------------------------------------------------------------------------
 // Point, stores 2 int components
 typedef struct {
     int y, x;
 } Point;
 
-// ----------------------------------------------------------------------------- 
-// Types Definitions
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Types Definitions
+// -----------------------------------------------------------------------------
 // Board, stores the board data
 typedef std::array<std::array<Tile, width>, height> Board;
 
@@ -55,53 +47,45 @@ typedef std::array<std::array<Tile, width>, height> Board;
 // NOTE: the tiles positions are stored as offsets from the pivot
 typedef std::array<std::pair<Tile, Point>, 4> Tetromino;
 
-// ----------------------------------------------------------------------------- 
-// Global Variables
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Global Variables
+// -----------------------------------------------------------------------------
 Board board {};
 Point currentPosition {};
 Tetromino currentTetromino {};
 
 std::atomic_bool running = true;
 
-// ----------------------------------------------------------------------------- 
-// Functions Definitions
-// ----------------------------------------------------------------------------- 
-
+// -----------------------------------------------------------------------------// Functions Definitions
+// -----------------------------------------------------------------------------
 // Get the Tetromino from the Shape
 Tetromino get_tetromino(Shape shape) {
     switch (shape) {
         case Shape::STRAIGHT:
             return {{
                 { Tile::PIVOT, { 0,  0 } },
-                { Tile::FULL,  { 1, -1 } },
+                { Tile::FULL,  { 0, -1 } },
                 { Tile::FULL,  { 0,  1 } },
                 { Tile::FULL,  { 0,  2 } }
             }};
-        case Shape::SQUARE:  
-            return {{
+        case Shape::SQUARE:             return {{
                 { Tile::PIVOT, { 0, 0 } },
                 { Tile::FULL,  { 0, 1 } },
                 { Tile::FULL,  { 1, 0 } },
                 { Tile::FULL,  { 1, 1 } }
             }};
-        case Shape::T:       
-            return {{
+        case Shape::T:                  return {{
                 { Tile::PIVOT, { 0,  0 } },
                 { Tile::FULL,  { 0, -1 } },
                 { Tile::FULL,  { 0,  1 } },
                 { Tile::FULL,  { 1,  1 } }
             }};
-        case Shape::L:       
-            return {{
+        case Shape::L:                  return {{
                 { Tile::PIVOT, {  0, 0 } },
                 { Tile::FULL,  { -1, 0 } },
                 { Tile::FULL,  { -2, 0 } },
                 { Tile::FULL,  {  0, 1 } }
             }};
-        case Shape::SKEW:    
-            return {{
+        case Shape::SKEW:               return {{
                 { Tile::PIVOT, {  0, 0 } },
                 { Tile::FULL,  {  1, 0 } },
                 { Tile::FULL,  {  0, 1 } },
@@ -149,6 +133,63 @@ char get_key_pressed() {
     return buf;
 }
 
+// Update the board
+void update() {
+    auto newBoard = board;
+    bool isColliding = false;
+    for (const auto& [_, offset] : currentTetromino) {
+        const Point position = {
+            currentPosition.y + offset.y + 1,
+            currentPosition.x + offset.x
+        };
+
+        // check for bottom collision
+        if (board[position.y][position.x] == Tile::FULL
+                || position.y >= height) {
+            isColliding = true;
+        }
+
+        newBoard[currentPosition.y + offset.y]
+            [currentPosition.x + offset.x]
+                = Tile::FULL;
+    }
+
+    if (isColliding) {
+        std::swap(board, newBoard);
+        spawn_tetromino();
+    } else {
+        currentPosition.y++;
+    }
+
+    // clear completed rows
+    for (auto& row : board) {
+        bool isComplete = true;
+        for (const auto& cell : row) {
+            isComplete &= cell != Tile::EMPTY;
+        }
+
+        if (isComplete) {
+            row = {};
+        }
+    }
+
+    // move down rows
+//    for (auto i = board.size() - 2; i >= 0; i--) {
+//        auto& row = board[i];
+//        for (auto j = i + 1; j < board.size(); j++) {
+//            auto rowBelow = board[j];
+//            bool isClear = true;
+//            for (const auto& cell : rowBelow) {
+//                isClear &= cell == Tile::EMPTY;
+//            }
+//
+//            if (isClear) {
+//                std::swap(row, rowBelow);
+//            }
+//        }
+//    }
+}
+
 // Handle the key pressed
 void handle_key_press() {
     while (running) {
@@ -157,29 +198,47 @@ void handle_key_press() {
         switch (get_key_pressed()) {
             case 'h':
                 {
-                    if (currentPosition.x > 0) {
+                    auto leftmostPosition = currentPosition.x;
+                    for (const auto& [_, offset] : currentTetromino) {
+                        const auto position = currentPosition.x + offset.x;
+                        if (position < leftmostPosition) {
+                            leftmostPosition = position;
+                        }
+                    }
+
+                    if (leftmostPosition > 0) {
                         currentPosition.x--;
                     }
                     break;
                 }
             case 'l':
                 {
-                    if (currentPosition.x < width - 1) {
+                    auto rightmostPosition = currentPosition.x;
+                    for (const auto& [_, offset] : currentTetromino) {
+                        const auto position = currentPosition.x + offset.x;
+                        if (position > rightmostPosition) {
+                            rightmostPosition = position;
+                        }
+                    }
+
+                    if (rightmostPosition < width - 1) {
                         currentPosition.x++;
                     }
                     break;
                 }
             case 'j':
                 {
-                    // TODO: move down
+                    while (currentPosition.y != 0) {
+                        update();
+                    };
                     break;
                 }
             case 'r':
                 {
-                    for (auto& [tile, point] : currentTetromino) {
-                        const auto temp = point.x;
-                        point.x = point.y;
-                        point.y = -temp;
+                    for (auto& [_, offset] : currentTetromino) {
+                        const auto temp = offset.x;
+                        offset.x = offset.y;
+                        offset.y = -temp;
                     }
                     break;
                 }
@@ -195,46 +254,13 @@ void handle_key_press() {
     };
 }
 
-// Update the board
-void update() {
-    auto newBoard = board;
-    bool isColliding = false;
-    for (const auto& p : currentTetromino) {
-        const auto& [tile, offset] = p;
-        const Point position = {
-            currentPosition.y + offset.y + 1,
-            currentPosition.x + offset.x
-        };
-
-        // check for bottom collision
-        if (board[position.y][position.x] == Tile::FULL
-                || position.y >= height) {
-            isColliding = true;
-        }
-
-        newBoard
-            [currentPosition.y + offset.y]
-            [currentPosition.x + offset.x]
-                = Tile::FULL;
-    }
-
-    if (isColliding) {
-        std::swap(board, newBoard);
-        spawn_tetromino();
-        return;
-    }
-
-    currentPosition.y++;
-}
-
 // Draw the UI
 void draw() {
     std::cout << ANSI_CLEAR;
 
     // draw the box boundaries
     std::println(std::cout,
-            "┌{:─>{}}┐", 
-            "", width);
+            "┌{:─>{}}┐",            "", width);
 
     // draw the board
     for (auto i = 0; i < board.size(); i++) {
@@ -242,20 +268,11 @@ void draw() {
         std::print("│");
         for (auto j = 0; j < row.size(); j++) {
             const auto& cell = row[j];
-            switch (cell) {
-                case Tile::EMPTY:
-                    {
-                        std::print(" ");
-                        break;
-                    }
-                case Tile::PIVOT:
-                case Tile::FULL:
-                    {
-                        std::print("■");
-                        break;
-                    }
-                default: throw std::exception(); // Unreachable
-            };
+            if (cell == Tile::EMPTY) {
+                std::print(" ");
+            } else {
+                std::print("■");
+            }
         }
         std::println("│");
     }
@@ -266,9 +283,8 @@ void draw() {
             "", width);
 
     // draw the current Tetromino
-    for (const auto& p : currentTetromino) {
-        const auto& [tile, offset] = p;
-        const Point  position = {
+    for (const auto& [_, offset] : currentTetromino) {
+        const Point position = {
             currentPosition.y + offset.y,
             currentPosition.x + offset.x
         };
