@@ -162,32 +162,22 @@ void update() {
     }
 
     // clear completed rows
-    for (auto& row : board) {
+    for (auto i = height - 1; i >= 0; i--) {
+        auto& row = board[i];
         bool isComplete = true;
         for (const auto& cell : row) {
             isComplete &= cell != Tile::EMPTY;
         }
 
         if (isComplete) {
-            row = {};
+            // move down rows
+            for (auto j = i; j > 0; j--) {
+                board[j] = board[j - 1];
+            }
+
+            board[0] = {};
         }
     }
-
-    // move down rows
-//    for (auto i = board.size() - 2; i >= 0; i--) {
-//        auto& row = board[i];
-//        for (auto j = i + 1; j < board.size(); j++) {
-//            auto rowBelow = board[j];
-//            bool isClear = true;
-//            for (const auto& cell : rowBelow) {
-//                isClear &= cell == Tile::EMPTY;
-//            }
-//
-//            if (isClear) {
-//                std::swap(row, rowBelow);
-//            }
-//        }
-//    }
 }
 
 // Handle the key pressed
