@@ -36,11 +36,5 @@ List of references used for this project:
 ```
 
 ### Trasformation function
-```cxx
-typedef std::pair<int, int> ivec2;
-
-void rotate_point(ivec2& point) {
-    auto [y, x] = point;
-    point = {x, -y};
-}
-```
+Defined the tetromino as a collection of offsets from the pivot point,
+the rotated offset will be equal to `{ .y = -x, .x = y }`

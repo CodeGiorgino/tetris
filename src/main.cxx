@@ -226,9 +226,7 @@ void handle_key_press() {
             case 'r':
                 {
                     for (auto& [_, offset] : currentTetromino) {
-                        const auto temp = offset.x;
-                        offset.x = offset.y;
-                        offset.y = -temp;
+                        offset = { offset.y, -offset.x };
                     }
                     break;
                 }
