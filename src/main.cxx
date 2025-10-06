@@ -10,7 +10,8 @@
 
 using namespace std::chrono_literals;
 
-// -----------------------------------------------------------------------------// Constants Definitions
+// -----------------------------------------------------------------------------
+// Constants Definitions
 // -----------------------------------------------------------------------------
 constexpr auto width  = 10;
 constexpr auto height = 20;
@@ -19,7 +20,8 @@ constexpr auto height = 20;
 #define ANSI_SAVE_POSITION    "\033[s"
 #define ANSI_RESTORE_POSITION "\033[u"
 
-// -----------------------------------------------------------------------------// Enumerators Definitions
+// -----------------------------------------------------------------------------
+// Enumerators Definitions
 // -----------------------------------------------------------------------------
 // Tile, the states of a cell
 enum class Tile {
@@ -31,14 +33,16 @@ enum class Shape {
     STRAIGHT, SQUARE, T, L, SKEW, __last
 };
 
-// -----------------------------------------------------------------------------// Structures Definitions
+// -----------------------------------------------------------------------------
+// Structures Definitions
 // -----------------------------------------------------------------------------
 // Point, stores 2 int components
 typedef struct {
     int y, x;
 } Point;
 
-// -----------------------------------------------------------------------------// Types Definitions
+// -----------------------------------------------------------------------------
+// Types Definitions
 // -----------------------------------------------------------------------------
 // Board, stores the board data
 typedef std::array<std::array<Tile, width>, height> Board;
@@ -47,15 +51,19 @@ typedef std::array<std::array<Tile, width>, height> Board;
 // NOTE: the tiles positions are stored as offsets from the pivot
 typedef std::array<std::pair<Tile, Point>, 4> Tetromino;
 
-// -----------------------------------------------------------------------------// Global Variables
+// -----------------------------------------------------------------------------
+// Global Variables
 // -----------------------------------------------------------------------------
 Board board {};
 Point currentPosition {};
 Tetromino currentTetromino {};
 
 std::atomic_bool running = true;
+unsigned int comboClearCount = 0;
+unsigned int score = 0;
 
-// -----------------------------------------------------------------------------// Functions Definitions
+// -----------------------------------------------------------------------------
+// Functions Definitions
 // -----------------------------------------------------------------------------
 // Get the Tetromino from the Shape
 Tetromino get_tetromino(Shape shape) {
@@ -162,6 +170,7 @@ void update() {
     }
 
     // clear completed rows
+    bool isScoring = false;
     for (auto i = height - 1; i >= 0; i--) {
         auto& row = board[i];
         bool isComplete = true;
@@ -176,8 +185,35 @@ void update() {
             }
 
             board[0] = {};
+            isScoring = true;
+            comboClearCount++;
         }
     }
+
+    comboClearCount *= static_cast<int>(isScoring);
+    switch (comboClearCount) {
+        case 0: break;
+        case 1:
+        {
+            score += 40;
+            break;
+        }
+        case 2:
+        {
+            score += 100;
+            break;
+        }
+        case 3:
+        {
+            score += 300;
+            break;
+        }
+        default: // 4 or more line consecutive
+        {
+            score += 1200;
+            break;
+        }
+    };
 }
 
 // Handle the key pressed
@@ -271,7 +307,7 @@ void draw() {
             if (cell == Tile::EMPTY) {
                 std::print("  ");
             } else {
-                std::print("\033[47m  \033[0m");
+                std::print("\033[47m""  ""\033[0m");
             }
         }
         std::println("│");
@@ -288,11 +324,15 @@ void draw() {
         };
 
         std::print(std::cout,
-                "\033[{};{}f""\033[47m  \033[0m",
+                "\033[{};{}f""\033[47m""  ""\033[0m",
                 position.y + 2,
                 position.x * 2 + 2);
     }
 
+    std::print(std::cout,
+            "\033[0;2f"
+            "\033[1m""[ Score: {} ]""\033[0m",
+            score);
     std::println(std::cout,
             "\033[{};0f",
             height + 2);
