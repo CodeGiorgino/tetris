@@ -188,30 +188,42 @@ void handle_key_press() {
         switch (get_key_pressed()) {
             case 'h':
                 {
+                    bool isColliding = false;
                     auto leftmostPosition = currentPosition.x;
                     for (const auto& [_, offset] : currentTetromino) {
-                        const auto position = currentPosition.x + offset.x;
-                        if (position < leftmostPosition) {
-                            leftmostPosition = position;
+                        const Point position = {
+                            currentPosition.y + offset.y,
+                            currentPosition.x + offset.x - 1,
+                        };
+
+                        isColliding |= board[position.y][position.x] != Tile::EMPTY;
+                        if (position.x < leftmostPosition) {
+                            leftmostPosition = position.x;
                         }
                     }
 
-                    if (leftmostPosition > 0) {
+                    if (!isColliding && leftmostPosition >= 0) {
                         currentPosition.x--;
                     }
                     break;
                 }
             case 'l':
                 {
+                    bool isColliding = false;
                     auto rightmostPosition = currentPosition.x;
                     for (const auto& [_, offset] : currentTetromino) {
-                        const auto position = currentPosition.x + offset.x;
-                        if (position > rightmostPosition) {
-                            rightmostPosition = position;
+                        const Point position = {
+                            currentPosition.y + offset.y,
+                            currentPosition.x + offset.x + 1,
+                        };
+
+                        isColliding |= board[position.y][position.x] != Tile::EMPTY;
+                        if (position.x > rightmostPosition) {
+                            rightmostPosition = position.x;
                         }
                     }
 
-                    if (rightmostPosition < width - 1) {
+                    if (!isColliding && rightmostPosition < width) {
                         currentPosition.x++;
                     }
                     break;
@@ -225,6 +237,7 @@ void handle_key_press() {
                 }
             case 'r':
                 {
+                    // FIXME: check for boundaries rotation
                     for (auto& [_, offset] : currentTetromino) {
                         offset = { .y = -offset.x, .x = offset.y };
                     }
@@ -290,7 +303,6 @@ int main(void) {
     // handle key press in separate thread
     std::thread inputThread(handle_key_press);
 
-    srand(0);
     spawn_tetromino();
 
     while (running) {
