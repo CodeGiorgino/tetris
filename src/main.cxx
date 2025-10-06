@@ -226,7 +226,7 @@ void handle_key_press() {
             case 'r':
                 {
                     for (auto& [_, offset] : currentTetromino) {
-                        offset = { offset.y, -offset.x };
+                        offset = { .y = -offset.x, .x = offset.y };
                     }
                     break;
                 }
@@ -247,8 +247,7 @@ void draw() {
     std::cout << ANSI_CLEAR;
 
     // draw the box boundaries
-    std::println(std::cout,
-            "┌{:─>{}}┐",            "", width);
+    std::println(std::cout, "┌{:─>{}}┐", "", width * 2);
 
     // draw the board
     for (auto i = 0; i < board.size(); i++) {
@@ -257,18 +256,16 @@ void draw() {
         for (auto j = 0; j < row.size(); j++) {
             const auto& cell = row[j];
             if (cell == Tile::EMPTY) {
-                std::print(" ");
+                std::print("  ");
             } else {
-                std::print("■");
+                std::print("\033[47m  \033[0m");
             }
         }
         std::println("│");
     }
 
     // draw the box boundaries
-    std::println(std::cout,
-            "└{:─>{}}┘",
-            "", width);
+    std::println(std::cout, "└{:─>{}}┘", "", width * 2);
 
     // draw the current Tetromino
     for (const auto& [_, offset] : currentTetromino) {
@@ -278,9 +275,9 @@ void draw() {
         };
 
         std::print(std::cout,
-                "\033[{};{}f""■",
+                "\033[{};{}f""\033[47m  \033[0m",
                 position.y + 2,
-                position.x + 2);
+                position.x * 2 + 2);
     }
 
     std::println(std::cout,
@@ -293,6 +290,7 @@ int main(void) {
     // handle key press in separate thread
     std::thread inputThread(handle_key_press);
 
+    srand(0);
     spawn_tetromino();
 
     while (running) {
