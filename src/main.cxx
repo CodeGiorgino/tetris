@@ -110,7 +110,13 @@ Tetromino get_tetromino(Shape shape) {
 
 // Spawn a new tetromino
 void spawn_tetromino() {
-    currentPosition = { 0, static_cast<int>(width * 0.5) };
+    const int x = width * 0.5;
+    if (board[0][x] != Tile::EMPTY) {
+        running = false;
+        return;
+    }
+    
+    currentPosition = { 0, x };
     currentTetromino = get_tetromino(
             static_cast<Shape>(
                 rand() % std::to_underlying(Shape::__last)));
