@@ -24,6 +24,7 @@ constexpr auto height = 20;
 // Enumerators Definitions
 // -----------------------------------------------------------------------------
 // Tile, the states of a cell
+// TODO: PIVOT not necessary
 enum class Tile {
     EMPTY, PIVOT, FULL
 };
@@ -75,29 +76,33 @@ Tetromino get_tetromino(Shape shape) {
                 { Tile::FULL,  { 0,  1 } },
                 { Tile::FULL,  { 0,  2 } }
             }};
-        case Shape::SQUARE:             return {{
+        case Shape::SQUARE:
+            return {{
                 { Tile::PIVOT, { 0, 0 } },
                 { Tile::FULL,  { 0, 1 } },
                 { Tile::FULL,  { 1, 0 } },
                 { Tile::FULL,  { 1, 1 } }
             }};
-        case Shape::T:                  return {{
+        case Shape::T:
+            return {{
                 { Tile::PIVOT, { 0,  0 } },
                 { Tile::FULL,  { 0, -1 } },
                 { Tile::FULL,  { 0,  1 } },
-                { Tile::FULL,  { 1,  1 } }
+                { Tile::FULL,  { 1,  0 } }
             }};
-        case Shape::L:                  return {{
+        case Shape::L:
+            return {{
                 { Tile::PIVOT, {  0, 0 } },
                 { Tile::FULL,  { -1, 0 } },
                 { Tile::FULL,  { -2, 0 } },
                 { Tile::FULL,  {  0, 1 } }
             }};
-        case Shape::SKEW:               return {{
-                { Tile::PIVOT, {  0, 0 } },
-                { Tile::FULL,  {  1, 0 } },
-                { Tile::FULL,  {  0, 1 } },
-                { Tile::FULL,  { -1, 0 } }
+        case Shape::SKEW:
+            return {{
+                { Tile::PIVOT, { 0,  0 } },
+                { Tile::FULL,  { 0, -1 } },
+                { Tile::FULL,  { 1,  0 } },
+                { Tile::FULL,  { 1,  1 } }
             }};
         default: throw std::exception(); // Unreachable
     };
@@ -343,6 +348,7 @@ int main(void) {
     // handle key press in separate thread
     std::thread inputThread(handle_key_press);
 
+    srand(time(NULL));
     spawn_tetromino();
 
     while (running) {
